@@ -1,5 +1,144 @@
 # Changelog
 
+## 0.3.3 — 2026-10-28
+
+### 修：先确认文件存在，才让它变成芯片
+
+之前的判定只看「文字形状」——正文里任何像文件名的片段都会被画成可点芯片（悬停变手型、蓝色虚线高亮、右键弹自己的菜单）。日志摘录、示例路径、报错原文全中招；点开只会得到一句「没解析到这个文件」。
+
+这条提示本身就是设计错误：**给出一个点不开的入口，比根本不认识这个文件更糟**。
+
+改法是加一道存在性闸门：
+
+- 悬停命中候选后先异步 `resolve`，**只有文件真的存在**才变手型 + 画虚线；
+- 右键时若已确认「不是产物」，直接**放行宿主原生菜单**，绝不 `preventDefault` 抢走；
+- 左键同理，确认不是产物就什么都不做；
+- 解析结果进 30 秒 TTL 缓存（`raw → {ok, abs}`），同一段文字反复悬停不重复请求，同一次事件里的并发查询合并成一次往返；
+- 彻底删掉「没解析到这个文件」提示——静默收场，不装作成功也不打扰。
+
+副作用是好的：正文里的普通文字现在**看起来就是普通文字**，不会再有一堆点不动的伪芯片。
+
+## 0.3.2 — 2026-10-28
+
+### 修：「在文件夹中显示」改成 Explore 开窗 + SelectItem(29) 选中
+
+0.3.1 换成了 `SHOpenFolderAndSelectItems`，`hr = 0`、`SelectedItems()` 也真有值，但用户实测**窗口完全不弹**。这个 API 是「在已打开的窗口里定位」语义，没有现成窗口时什么也不显示，不能当「打开」入口用。
+
+同时回头查清了 0.2.8 的老毛病：`SelectItem($item, 1)` 只带 `SVSI_SELECT`，在窗口刚打开、目录项还没填充好的瞬间调用会静默无效——当时既没轮询也没校验 `SelectedItems()`，只看到脚本退出码 0 就记「成功」，于是「日志全绿、实际没选中」。
+
+现在分工明确：
+
+- **开窗**交给 `Shell.Application.Explore($dir)`——实测唯一可靠的开窗入口；
+- **选中**交给 `SelectItem($item, 29)`，`29 = SVSI_SELECT | SVSI_DESELECTOTHERS | SVSI_ENSUREVISIBLE | SVSI_FOCUSED`，缺 `ENSUREVISIBLE` 就不会滚到可视区；
+- 两处都加轮询：`Windows()` 最多等 6 秒，`ParseName` 最多等 6 秒；
+- **成功判据改为 `SelectedItems()` 非空**，不再是「脚本没报错」。
+
+实测（`powershell.exe` 5.1，与插件同款；跑前先关掉目标目录全部窗口）：`window_found=yes`、`item_found=yes`、`sel_count=1`、`sel_item=目标文件`。
+
+降级链不变：拿不到窗口（exit 5）、拿不到目录项（exit 3）、选不中（exit 4）→ 退回 `explorer.exe <目录>`，保证至少能开。
+
+## 0.3.1 — 2026-10-28
+
+### 修：「在文件夹中显示」只打开目录、不定位到文件
+
+0.2.8 把 reveal 从 `explorer.exe /select` 换成了 `Shell.Application` COM（`Explore` + 轮询 `Windows()` + `SelectItem`）。脚本退出码 0、日志写「成功」，但用户实测**只打开了目录、没有自动定位到文件**。
+
+根因：跨进程 COM 里 `$w.Document.Folder.ParseName($name)` 拿到的 `FolderItem` 与目标窗口不保证落在同一 PIDL 空间，`SelectItem` 会**静默失败**——不报错，也不选中。日志之所以显示「成功」，是因为脚本确实正常退出了。
+
+改用 `shell32!SHOpenFolderAndSelectItems`（资源管理器自己执行「在文件夹中显示」时调的就是它）：`ILCreateFromPath` 建 PIDL → 一次 API 调用完成「打开目录 + 选中项」→ `ILFree` 释放。不依赖窗口枚举，也没有跨进程 COM 的对象归属问题。
+
+实测：`hr = 0`，`SelectedItems()` 立即返回目标文件名。
+
+降级链保留：PIDL 建不出（exit 3）或 API 非 0（exit 4）→ 退回 `explorer.exe <dir>`，保证「至少能开」。
+
+## 0.3.0 — 2026-10-28
+
+### 新增：右键菜单补齐「搬运」和「喂给 AI」两类动作
+
+原来右键只有三项（打开 / 定位 / 复制路径），文件能看见、能打开，但**搬不走**。这次补三项，并按用途分组：
+
+| 分组 | 菜单项 | 做什么 |
+|---|---|---|
+| 看 | 用默认程序打开 | `explorer.exe <file>`，交给系统默认关联程序 |
+| 看 | 在文件夹中显示 | Shell COM 定位并选中（0.2.8 已修） |
+| 搬运 | **另存为…** | 弹系统保存窗口，把文件复制到用户选的位置 |
+| 搬运 | **复制文件** | 文件本身进剪贴板（`CF_HDROP`），可粘到任意文件夹 |
+| 搬运 | 复制文件路径 | 只复制路径文字 |
+| 喂 AI | **添加到对话框** | 把绝对路径插入上方聊天输入框 |
+
+菜单项之间加了 1px 分隔线，视觉上把三组分开。
+
+### 「复制文件」不是「复制路径」
+
+这两个必须分清，因为用户拿到的东西完全不同：
+
+- **复制文件路径** → 剪贴板里是字符串，粘到记事本得到一行文字；
+- **复制文件** → 剪贴板里是 `CF_HDROP`（文件列表），粘到资源管理器得到**文件副本本身**。
+
+实现走 `Set-Clipboard -LiteralPath`（PowerShell 5.1+ 能力）。本机实测：单个文件、含中文与空格的文件名（`路径 带空格.pdf`）都能正确写入并被 `Get-Clipboard -Format FileDropList` 读回。
+
+### 「另存为」的两个坑
+
+Node 侧没有跨平台的保存对话框，Windows 只能用 WinForms `SaveFileDialog`，而它：
+
+1. **必须跑在 STA 线程** —— 默认 MTA 直接抛 `InvalidOperationException`；
+2. **不给 owner 窗口时会弹到主窗口背后** —— 用户以为点了没反应，这是最容易踩的一条。
+
+所以脚本里既加了 `-STA`，又造了一个 1×1、`Opacity=0`、`TopMost` 的隐形 owner form；对话框返回后 `finally` 里关掉它。超时给到 10 分钟（用户可能慢慢挑目录、当场新建文件夹）。
+
+用户点「取消」时 PowerShell `exit 1`，这**不是错误**，路由返回 `reason: "cancelled"`，客户端静默不弹红字。
+
+另外挡掉了一种会毁数据的输入：**目标路径与源路径相同**。`copyFileSync` 对同一路径会抛 `EINVAL`，极端情况可能把原文件截断，所以提前返回 `reason: "same-path"`。
+
+### 「添加到对话框」为什么要三种写法兜底
+
+DSH 的输入框会随版本变（`textarea` / `contenteditable` / Lexical 都出现过），所以不写死单个选择器，而是：
+
+1. 一批候选选择器逐个试，按「宽度 ≥150px、可见、非只读」筛出最像输入区的那一个（从 DOM 末尾往前找，聊天输入框通常在最后）；
+2. **优先 `document.execCommand("insertText")`** —— 走浏览器真实输入管线，React / Lexical 的受控状态能同步更新；
+3. 回退到原生 `value` + `input` 事件（textarea / input）；
+4. 再回退到 `textContent` 追加 + `input` 事件（contenteditable）。
+
+三步全失败就明确提示「没找到聊天输入框」，**绝不假装成功**。
+
+### 安全边界
+
+- 新增路由同样只接受 loopback 请求，非回环来源一律 403；
+- `/saveas` `/copyfile` 是**有副作用**的文件操作，比 reveal/open 多挡三种输入：目录、不存在的文件、目标==源；
+- 路径全部经 `statOne` 先行确认，参数走 `execFile` 数组不经 shell，无命令注入面。
+
+### 校验
+
+五套探针共 **105 项全绿**：
+
+```
+probe-client-materialize   13/13
+probe-host-apply           21/21   （路由断言同步到 8 条）
+probe-regex                39/39
+probe-batch2               22/22
+probe-real-files           10/10
+```
+
+---
+
+## 0.2.8 — 2026-10-28
+
+### 修复：Windows「在资源管理器里揭示」点了没反应
+
+`explorer.exe /select,"<路径>"` 在本机实测**根本不起作用**：命令确实发出、退出码 1、日志无异常，但资源管理器既不新开窗口、也不改变选中项。四种传参写法（整串带引号 / 裸路径 / 拆成两个 argv / 去掉 `windowsVerbatimArguments`）逐一试过，全部无效 —— 请求转交给已运行的 explorer 实例时，选中意图被丢掉了。
+
+改为走 **Shell COM**：`Shell.Application.Explore(dir)` 打开目录，再用 `Folder.ParseName(name)` + `Document.SelectItem(item, 1)` 精确选中文件。已验证 `SelectedItems()` 能返回目标文件，中文文件名与深层路径均正常。
+
+实现细节：
+
+- PowerShell 脚本经 `-EncodedCommand` 以 **UTF-16LE Base64** 传入，绕开控制台代码页 —— 直接 `-Command` 传中文路径会变成 mojibake；
+- `windowsHide` 只隐藏 `powershell.exe` 自身（不闪黑窗），COM 拉起的资源管理器窗口照常显示；
+- 轮询等待目标窗口出现（最多约 3 秒）；失败时降级为「打开父目录」，保证不会毫无反应。
+
+`open`（默认程序打开）不受影响，仍是 `explorer.exe <file>`，实测对中文/空格路径有效。
+
+---
+
 ## 0.2.7 — 2026-10-28
 
 ### 文档：加上实机截图

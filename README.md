@@ -26,7 +26,7 @@ Two halves, one contract.
 
 | Half | Responsibility |
 | --- | --- |
-| **Host** (`lib/index.js`) | Registers a **resident system-prompt section** so "declare artifacts with full absolute paths" holds in *every* session and *every* preset — no skill needs to be loaded. Exposes six loopback-only routes for path resolution, `stat`, reveal and open. |
+| **Host** (`lib/index.js`) | Registers a **resident system-prompt section** so "declare artifacts with full absolute paths" holds in *every* session and *every* preset — no skill needs to be loaded. Exposes eight loopback-only routes for path resolution, `stat`, reveal, open, save-as and copy-file. |
 | **Client** (`lib/client.js`) | Turns artifact names in the transcript into clickable targets: left click reveals, right click opens a menu. **No resident UI, no scanning, no timers.** |
 
 The host half closes the loop: even when the model only says `result.h5`, the route layer resolves it against the session workspace, then falls back to a shallow recursive basename search, and returns the real absolute path.
@@ -113,6 +113,7 @@ On `allowOutside`: artifacts almost always live on a project drive (`E:\`, `D:\`
 
 - **Never modifies a single DOM node.** React owns the transcript; mutating its nodes causes blank renders on re-render. Clickability comes from a capture-phase `click` listener plus `caretRangeFromPoint` to work out which word was hit.
 - **Never takes over markdown image or link syntax.** Rewriting `![](path)` into a chip would break the image.
+- **Never draws a chip for a file that does not exist.** Chat text is full of filename-shaped fragments — log excerpts, example paths, error messages. Turning those into chips produces a clickable target that only ever answers "not resolved", which is worse than not recognising the file at all. So there is an existence gate: on hover the client resolves asynchronously and only becomes a pointer / dashed highlight when the file is really there. Confirmed non-artifacts stay plain text and the right-click falls through to the host's native menu. Results are cached for 30 s.
 - **Never writes a file, never phones home.** Zero telemetry. The only `spawn` calls are the explicit `/reveal` and `/open` routes, using `execFile` with an argument array (no shell, no injection surface), guarded by a loopback-origin check.
 - **Never renames or moves anything.** Read-only by construction.
 - **Does not unify with the official `present` card.** If an artifact was already delivered as a card, the injected rules tell the model not to repeat it.
@@ -135,7 +136,7 @@ dsh-artifact-linker/
 ├── package.json          # dsh.bundle + dsh.client, peer >=0.2.1-rc.3
 ├── cordis.patch.yml      # the patch entry (never duplicate this id)
 ├── lib/
-│   ├── index.js          # host: prompt section + 6 loopback routes
+│   ├── index.js          # host: prompt section + 8 loopback routes
 │   └── client.js         # client: __ModuleLoader__ bundle, read-only DOM
 ├── locale/{zh,en}.json   # meta.title / meta.description
 ├── icon.svg
