@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.3.6 — 2026-10-29
+
+### 修：安全闸按候选 base 逐个判定
+
+`reveal` / `open` 两条路由原本用 `isInside(process.cwd(), abs)` 做越界检查——而宿主的 `process.cwd()` 并不等于会话 workspace，这是个潜伏的错判点（`allowOutside: true` 时被掩盖，一旦关掉就会误拒 workspace 内的合法文件）。改为 `insideAnyBase(abs, allowOutside)`，逐候选 base 判定。
+
+## 0.3.5 — 2026-10-29
+
+### 新：「在侧边栏预览」
+
+右键菜单新增一项，把文件交给 DSH 内置右侧边栏渲染——和聊天里点文件链接走同一条通道（`dsh-resource://file/` 地址 + 宿主 `openResource`），所以 PDF、Word、Excel、PowerPoint、Markdown、纯文本、CSV、图片、音视频都能在里面看。
+
+实现上做了两件事：一是地址构造与官方 `dsh-util-workspace-path` 逐字对齐（不新增依赖）；二是加了一道类型闸——查看器渲染不了的扩展名**自动改走默认程序**，不会给出一个空白面板。客户端插件声明 `inject: ["slots"]`，预览器缺席时该菜单项自动隐藏。
+
+## 0.3.4 — 2026-10-29
+
+### 修：右键偶尔「假死」
+
+右键菜单弹出后立刻点菜单项，第一次点击有时被吞。改为用 pointer 事件绑定菜单项，并避开菜单挂载那一帧的焦点竞态。
+
+### 新：音视频扩展名
+
+白名单补上 `.flac .wav .mp3 .m4a .ogg .mp4 .mkv .mov .webm .avi`——音频产物（TTS 输出、母带）此前完全点不动。
+
 ## 0.3.3 — 2026-10-28
 
 ### 修：先确认文件存在，才让它变成芯片

@@ -27,57 +27,52 @@ Two halves, one contract.
 | Half | Responsibility |
 | --- | --- |
 | **Host** (`lib/index.js`) | Registers a **resident system-prompt section** so "declare artifacts with full absolute paths" holds in *every* session and *every* preset — no skill needs to be loaded. Exposes eight loopback-only routes for path resolution, `stat`, reveal, open, save-as and copy-file. |
-| **Client** (`lib/client.js`) | Turns artifact names in the transcript into clickable targets: left click reveals, right click opens a menu. **No resident UI, no scanning, no timers.** |
+| **Client** (`lib/client.js`) | Turns artifact names in the transcript into clickable targets: left click reveals, right click opens a seven-item menu (sidebar preview, open, reveal, save-as, copy file, copy path, add to composer). **No resident UI, no scanning, no timers.** |
 
 The host half closes the loop: even when the model only says `result.h5`, the route layer resolves it against the session workspace, then falls back to a shallow recursive basename search, and returns the real absolute path.
 
 ## What it looks like
 
-Hover an artifact name and it picks up a Codex-style blue dashed outline — that is the only visual hint, nothing is rewritten in your transcript:
-
-![Hover highlight](https://raw.githubusercontent.com/loyalchiiina/dsh-artifact-linker/main/docs/hover-highlight.png)
-
-Right click for the three actions:
+Hover an artifact name and it picks up a Codex-style blue dashed outline — that is the only visual hint, nothing is rewritten in your transcript. Right click for the full menu:
 
 ![Context menu](https://raw.githubusercontent.com/loyalchiiina/dsh-artifact-linker/main/docs/context-menu.png)
 
-"Copy file path" puts the real absolute path on your clipboard:
-
-![Copy path](https://raw.githubusercontent.com/loyalchiiina/dsh-artifact-linker/main/docs/copy-path.png)
-
 ## Interaction
 
-Click behaviour is decided by the modifier key — no menu, no first-time setup:
+Click behaviour is decided by the modifier key — no first-time setup:
 
 | Action | Result |
 | --- | --- |
 | **Left click** on a file name / path | Reveal in File Explorer *with the file selected* |
 | **Ctrl / Shift / Cmd + click** | Open with the system's default application |
 | **Alt + click** | Copy the full absolute path to the clipboard |
-
-### Interactions (v0.2 — no floating pill any more)
-
-| Action | Result |
-|---|---|
-| **Left click** an artifact name | Reveals and selects the file in Explorer |
-| **Right click** an artifact name | Inline menu: `📍 reveal` / `↗ open with default app` / `⧉ copy absolute path` |
-| **Hover** an artifact name | Cursor turns into a pointer (the only visual hint) |
-| Right click on **non-artifact** text | Fully passed through — the host's native menu appears as usual |
+| **Right click** on an artifact | Inline menu — seven actions, listed below |
+| **Right click** on non-artifact text | Fully passed through, the host's native menu appears as usual |
+| **Hover** | Cursor becomes a pointer *only after* the file is confirmed to exist |
 | File missing / unresolvable | Silent pass-through or a one-shot toast. **Never pretends to succeed.** |
 
-The following describes the removed v0.1 design:
+### Right-click menu
 
-The panel refreshes on its own; there are also explicit refresh / flush-cache / clear / close controls.
+| Item | What it does |
+| --- | --- |
+| **Preview in sidebar** | Opens the file in DSH's built-in right sidebar — the same route as clicking a file link in chat. That viewer handles PDF, Word, Excel, PowerPoint, Markdown, plain text, CSV, images, audio and video; an extension it cannot render is redirected to the default app instead of showing a blank pane |
+| **Open with default app** | Hands the file to the OS association (Explorer / Excel / VLC / …) |
+| **Reveal in Explorer** | Opens the containing folder and selects the file |
+| **Save as…** | Copies the file to a location you pick |
+| **Copy file** | Puts the file *itself* on the clipboard (`CF_HDROP`), so you can paste it into Explorer, mail or chat |
+| **Copy path** | Puts the real absolute path on the clipboard |
+| **Add to composer** | Inserts the path into the input box for the next message |
 
 ## How paths resolve
 
-A single path may arrive in three shapes, tried in order:
+A single path may arrive in four shapes, tried in order:
 
 1. **Absolute** — used as-is (`E:\project\out\case.h5`, `\\nas\share\a.zip`). Both drive letters and UNC are recognised.
 2. **Relative** — joined against the session workspace (`out\case.h5` → `<workspace>\out\case.h5`).
-3. **Bare file name** — a shallow recursive basename search under the workspace (depth 2 by default), used only when exactly one match is found. Multiple matches are surfaced as candidates instead of guessing.
+3. **Workspace roots** — every known profile and session workspace is tried, not only the current one.
+4. **Bare file name** — a shallow recursive basename search (depth 2 by default), used only when exactly one match is found. Multiple matches are surfaced as candidates instead of guessing. When a mention swallows leading words (`结果#1_速度云图.png` arriving as `#1_速度云图.png`), segments are shrunk from the left until one resolves.
 
-Results are cached with a 10 s TTL so that repeated queries from DOM re-renders do not hammer the disk, while a just-deleted file still flips to "gone" quickly.
+Results are cached — 10 s for `stat`, 30 s for the basename index — so repeated hovers from DOM re-renders do not hammer the disk, while a just-deleted file still flips to "gone" quickly.
 
 ## Install
 
@@ -140,7 +135,6 @@ dsh-artifact-linker/
 │   └── client.js         # client: __ModuleLoader__ bundle, read-only DOM
 ├── locale/{zh,en}.json   # meta.title / meta.description
 ├── icon.svg
-├── scripts/probe-regex.mjs
 ├── README.md / README.zh.md
 ├── CHANGELOG.md
 └── LICENSE

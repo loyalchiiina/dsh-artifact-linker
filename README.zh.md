@@ -21,23 +21,15 @@ DSH 里预览器已经能开图片、代码、pdf、office。但**插件、脚�
 | 半边 | 做什么 |
 |---|---|
 | **宿主（提示词层）** | 常驻注入一条「产物路径铁律」，要求模型把产物写成**完整绝对路径**、而给用户看的正文**只写文件名**——路径有据可查，正文又不被长串路径污染 |
-| **客户端（渲染层）** | 正文里的产物名变成可点目标：左键揭示、右键菜单。**零常驻 UI、零扫描、零定时器** |
+| **客户端（渲染层）** | 正文里的产物名变成可点目标：左键揭示、右键七项菜单（侧边栏预览 / 默认程序打开 / 在文件夹中显示 / 另存为 / 复制文件 / 复制路径 / 添加到对话框）。**零常驻 UI、零扫描、零定时器** |
 
 第 1 条管「模型把路径写对」，第 2 条管「用户点得动」。缺前者，路径经常是猜的、点开是死链；缺后者，路径再对也要人去复制。
 
 ## 长什么样
 
-悬停到产物名上，会出现 Codex 风格的蓝色虚线框——这是唯一的视觉提示，正文一个字都不会被改写：
-
-![悬停高亮](https://raw.githubusercontent.com/loyalchiiina/dsh-artifact-linker/main/docs/hover-highlight.png)
-
-右键是三个动作：
+悬停到产物名上，会出现 Codex 风格的蓝色虚线框——这是唯一的视觉提示，正文一个字都不会被改写。右键弹出完整菜单：
 
 ![右键菜单](https://raw.githubusercontent.com/loyalchiiina/dsh-artifact-linker/main/docs/context-menu.png)
-
-「复制文件路径」把真实绝对路径放进剪贴板：
-
-![复制路径](https://raw.githubusercontent.com/loyalchiiina/dsh-artifact-linker/main/docs/copy-path.png)
 
 ---
 
@@ -50,27 +42,22 @@ DSH 里预览器已经能开图片、代码、pdf、office。但**插件、脚�
 | **左键** | 在系统资源管理器里**揭示并选中**该文件（不是打开它，是把它亮在你面前） |
 | **Ctrl / Shift / Cmd + 左键** | 用系统默认关联程序打开（Excel、PS、播放器……） |
 | **Alt + 左键** | 复制完整绝对路径到剪贴板 |
-
-### 三种交互（v0.2 起不再有浮球）
-
-正文里出现产物名时：
-
-| 操作 | 效果 |
-|---|---|
-| **左键**点产物名 | 在资源管理器里揭示并选中该文件 |
-| **右键**点产物名 | 本插件菜单：`📍 揭示` / `↗ 默认程序打开` / `⧉ 复制完整路径` |
-| **悬停**在产物名上 | 鼠标变手型（唯一的视觉提示） |
-| 在**非产物**文字上右键 | 完全放行，宿主原生菜单照常出现 |
+| **右键**产物名 | 插件菜单，共七项（见下表） |
+| **右键**非产物文字 | 完全放行，宿主原生菜单照常出现 |
+| **悬停** | 只有**确认文件真的存在**才变手型、才画虚线 |
 | 文件不存在 / 解析不到 | 静默放行或一次性提示，**绝不假装成功** |
 
-以下为 v0.1 的历史设计（已移除）：
+### 右键菜单
 
-- 点击展开清单，按发现时间倒序，每行给出：类型图标 · 文件名 · 状态点 · 完整路径 · 大小 · 修改时间；
-- 状态点：🟢 存在 / 🔴 已不存在（划掉） / ⚪ 尚未确认；
-- 每行右侧三个按钮：`📍` 揭示 · `↗` 打开 · `⧉` 复制；
-- 顶部：`刷新`（重查状态）· `清缓存`（清宿主 stat 缓存）· `清空`（只清面板清单，**不动任何文件**）。
-
-同一文件名出现多次只记一条（按次数累计），清单上限 200 条，超出后按发现顺序淘汰最旧。
+| 菜单项 | 作用 |
+|---|---|
+| **在侧边栏预览** | 在 DSH 内置右侧边栏里打开，和聊天里点文件链接是同一条通道。该查看器支持 PDF、Word、Excel、PowerPoint、Markdown、纯文本、CSV、图片、音视频；它渲染不了的扩展名会**自动改走默认程序**，不会给你一个空白面板 |
+| **用默认程序打开** | 交给系统关联（资源管理器 / Excel / 播放器……） |
+| **在文件夹中显示** | 打开所在目录并选中该文件 |
+| **另存为…** | 复制到你指定的位置 |
+| **复制文件** | 把文件**本身**放进剪贴板（`CF_HDROP`），可以直接粘到资源管理器、邮件、聊天窗口 |
+| **复制文件路径** | 把真实绝对路径放进剪贴板 |
+| **添加到对话框** | 把路径插入输入框，供下一条消息使用 |
 
 ---
 
@@ -79,14 +66,17 @@ DSH 里预览器已经能开图片、代码、pdf、office。但**插件、脚�
 模型嘴里的话不可全信，插件按顺序试：
 
 1. **`/workspace/<...>`** —— DSH 工作区的虚拟根，映射到真实 workspace 目录；
-2. **原生绝对路径** —— `E:\proj\out\a.xlsx` 直接用；
-3. **workspace 内的相对路径** —— 以 workspace 为基准拼接；
-4. **裸文件名** —— 在 workspace 内递归搜同名文件（跳过 `node_modules/.git/dist/build/` 等），按「最近修改优先」+「目录深度浅优先」排序：
+2. **原生绝对路径** —— `E:\proj\out\a.xlsx` 直接用（盘符和 UNC 都认）；
+3. **会话相对路径** —— 以会话 workspace 为基准拼接；
+4. **各 workspace 根** —— 遍历所有已知的 profile / 会话 workspace，不只当前那一个；
+5. **裸文件名** —— 深浅递归搜同名文件（跳过 `node_modules/.git/dist/build/` 等），按「最近修改优先」+「目录深度浅优先」排序：
    - 命中 **1 个** → 直接用；
    - 命中 **多个** → 返回候选列表交给用户，**绝不猜**（猜错比不猜更糟）；
    - 命中 **0 个** → 若 `allowOutside: true`，再在磁盘上按名字做一次浅层搜索。
 
-结果一律带 10 秒 TTL 缓存，避免重复 stat 打满磁盘。
+提到时若「提及吞掉了前面几个词」（`结果#1_速度云图.png` 只剩 `#1_速度云图.png`），会**从左逐段收缩重试**直到能命中。
+
+缓存两层：`stat` 10 秒、同名索引 30 秒——避免重复打满磁盘，同时刚删掉的文件也能很快翻成「已不存在」。
 
 ---
 
@@ -187,8 +177,8 @@ dsh-artifact-linker/
 `dsh-artifact-linker` turns every delivered artifact into a one-click target, so you never copy a path into Explorer again.
 
 - **Host half** injects a resident system-prompt rule: always emit **absolute** artifact paths in tooling, but only the **file name** in user-facing prose.
-- **Client half** makes those names clickable — **left click** reveals and selects the file in Explorer, **right click** opens a small menu (reveal / open with default app / copy absolute path). Hovering turns the cursor into a pointer. No floating UI, no document scanning, no timers.
-- Bare file names are resolved with a three-tier fallback (native absolute → workspace-relative → recursive same-name search). Ambiguous matches are surfaced as candidates rather than guessed.
+- **Client half** makes those names clickable — **left click** reveals and selects the file in Explorer, **right click** opens a seven-item menu: preview in sidebar, open with default app, reveal in Explorer, save as, copy the file itself, copy absolute path, add to composer. Hovering turns the cursor into a pointer only after the file is confirmed to exist. No floating UI, no document scanning, no timers.
+- Bare file names are resolved with a multi-tier fallback (native absolute → session-relative → every known workspace root → recursive same-name search), shrinking the mention from the left when leading words are swallowed. Ambiguous matches are surfaced as candidates rather than guessed.
 - All routes are loopback-only, telemetry-free, and spawn nothing through a shell. The client never mutates React-rendered DOM.
 
 MIT licensed.
