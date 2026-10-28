@@ -31,6 +31,20 @@ Two halves, one contract.
 
 The host half closes the loop: even when the model only says `result.h5`, the route layer resolves it against the session workspace, then falls back to a shallow recursive basename search, and returns the real absolute path.
 
+## What it looks like
+
+Hover an artifact name and it picks up a Codex-style blue dashed outline — that is the only visual hint, nothing is rewritten in your transcript:
+
+![Hover highlight](https://raw.githubusercontent.com/loyalchiiina/dsh-artifact-linker/main/docs/hover-highlight.png)
+
+Right click for the three actions:
+
+![Context menu](https://raw.githubusercontent.com/loyalchiiina/dsh-artifact-linker/main/docs/context-menu.png)
+
+"Copy file path" puts the real absolute path on your clipboard:
+
+![Copy path](https://raw.githubusercontent.com/loyalchiiina/dsh-artifact-linker/main/docs/copy-path.png)
+
 ## Interaction
 
 Click behaviour is decided by the modifier key — no menu, no first-time setup:

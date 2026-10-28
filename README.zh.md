@@ -25,6 +25,20 @@ DSH 里预览器已经能开图片、代码、pdf、office。但**插件、脚�
 
 第 1 条管「模型把路径写对」，第 2 条管「用户点得动」。缺前者，路径经常是猜的、点开是死链；缺后者，路径再对也要人去复制。
 
+## 长什么样
+
+悬停到产物名上，会出现 Codex 风格的蓝色虚线框——这是唯一的视觉提示，正文一个字都不会被改写：
+
+![悬停高亮](https://raw.githubusercontent.com/loyalchiiina/dsh-artifact-linker/main/docs/hover-highlight.png)
+
+右键是三个动作：
+
+![右键菜单](https://raw.githubusercontent.com/loyalchiiina/dsh-artifact-linker/main/docs/context-menu.png)
+
+「复制文件路径」把真实绝对路径放进剪贴板：
+
+![复制路径](https://raw.githubusercontent.com/loyalchiiina/dsh-artifact-linker/main/docs/copy-path.png)
+
 ---
 
 ## 交互
