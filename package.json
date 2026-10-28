@@ -1,6 +1,6 @@
 {
   "name": "dsh-artifact-linker",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "DSH 产物路径联动器：常驻注入「产物路径铁律」让模型输出完整绝对路径，同时把聊天正文里的文件名/路径渲染成一键可点的产物芯片——左键预览、右键在资源管理器揭示、Ctrl 点击强制系统打开。宿主端提供 /resolve /stat /info 只读回环路由（相对路径与裸文件名三源兜底、批量 stat + TTL 缓存），客户端零侵入、不改 React 节点、不接管 markdown 图片语法。解决「产物要打开得先复制路径再粘到文件管理器」的反复割裂。Zero telemetry; loopback-only routes. / Turn declared artifact paths into one-click chips: resident system-prompt rules force absolute paths, the client half renders file names as clickable chips (preview / reveal in Explorer / open with system app), and the host exposes loopback-only /resolve,/stat,/info routes with bare-filename fallback and cached batch stat.",
   "type": "module",
   "main": "lib/index.js",
