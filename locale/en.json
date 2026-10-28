@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Artifact Linker",
+    "description": "Resident system-prompt rules force artifact paths to be absolute, and every file name in the chat body turns into a one-click chip: click to reveal in Explorer, Ctrl-click to open with the system app, Alt-click to copy the path."
+  }
+}

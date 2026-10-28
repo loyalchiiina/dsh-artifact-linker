@@ -1,0 +1,52 @@
+# dsh-artifact-linker — 产物路径联动器（双端插件）
+#
+# ── 宿主半边（lib/index.js）──────────────────────────────────────────────────
+#   1. 注册一条常驻 system-prompt 段（ctx.systemPrompt.section，order 200），
+#      让「产物一律输出完整绝对路径」在**每个会话／每个预设**生效，不依赖任何
+#      技能被加载（技能按需加载，prompt 段常驻）；
+#   2. 注册 6 条回环路由：
+#        /info          插件身份 + workspace 信息 + 各开关实际取值
+#        /resolve       {原样路径 | 相对路径 | 裸文件名} → 绝对路径（三源兜底）
+#        /stat          批量 stat + 10s TTL 缓存
+#        /flush-cache   清空宿主端路径解析与 stat 缓存
+#        /reveal        在系统资源管理器里揭示并选中该文件
+#        /open          用系统默认关联程序打开该文件
+#   3. 不写任何文件、不联网（零遥测）；唯一会 spawn 的是 reveal/open 两条
+#      显式路由，且走 execFile 参数数组（不经 shell，无命令注入面），
+#      并带 loopback 来源校验。
+#
+# ── 客户端半边（lib/client.js）──────────────────────────────────────────────
+#   **全程只读正文，一个 DOM 节点都不改、一条属性都不加**（改 React 管理的节点
+#   会在重渲染时白屏，这是本插件刻意规避的第一号风险）。可点性靠：
+#     · document 捕获期 click + caretRangeFromPoint 反查「用户点中了哪个词」，
+#       正则命中产物名/路径即拦截，按修饰键分流；
+#     · 右下角浮动胶囊「📎 N」把本会话检测到的产物聚成清单（Shadow DOM 挂 body）。
+#   修饰键分流：左键 = 资源管理器揭示并选中 / Ctrl·Shift·Cmd = 系统默认程序打开 /
+#               Alt = 复制完整路径。清单每行另有 📍 ↗ ⧉ 三个按钮。
+#   markdown 图片与链接语法一律不接管（避免把图改成芯片导致图不显示）。
+#
+# ── 开关（改完重启 DSH 生效）───────────────────────────────────────────────
+#   injectRules  (默认 true)  常驻 prompt 段：要求模型输出产物绝对路径、正文只写文件名
+#   clientChips  (默认 true)  客户端胶囊与点击接管；置 false 则纯注入模式（只剩 prompt 铁律）
+#   allowOutside (默认 true)  是否允许解析 workspace 之外的路径。产物几乎总在项目盘
+#                             （E:/D:）而不是 DSH workspace 里，所以默认放开。
+#                             **多用户/给别人用时改 false**——那是防止本插件变成
+#                             「模型说个路径就帮你打开任意文件」的安全闸。
+#   statTtlMs    (默认 10000) 宿主端 stat 缓存毫秒数。调小 = 更快反映「文件刚被删」，
+#                             调大 = DOM 重渲染反复问同一路径时更省 IO
+#   searchMaxDepth (默认 2，硬上限 8) 裸文件名反查的递归深度。调大能找回埋得更深的同名
+#                             文件，但 /resolve 的目录遍历成本随之上升
+#   rulesText    (默认内置 6 条) 整体替换注入的铁律文本，可写数组或一个多行字符串。
+#                             想追加自己的规矩（例：「交付前先确认文件字节数非 0」）就写这里
+#                             —— 官方硬规则 #5 要求所有 tunable 必须能在 cordis.yml 改，
+#                             故上述全部可在 profile 的 cordis.patch.yml 里覆盖。
+#
+# 🔴 绝不要再在 profile 的 cordis.patch.yml 里手写同一段 insert —— 同一 entry id
+#    插两行会触发 duplicate loader entry id，插件市场更新时被差回滚。
+- insert:
+    - id: dsh-artifact-linker
+      name: dsh-artifact-linker
+      config:
+        injectRules: true
+        clientChips: true
+        allowOutside: true
