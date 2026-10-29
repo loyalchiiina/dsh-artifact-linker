@@ -1,5 +1,38 @@
 # Changelog
 
+## 0.3.9 — 2026-10-29
+
+### 修：插件市场看不到下载量 / 版本号 / 搜不到
+
+根因不在市场，在**本包 npm 元数据缺 `repository` 字段**。
+
+市场目录（awesome-dsh-plugin / dsh-plugin-catalog）用 `scripts/probe-npm.mjs` 判定「这个 GitHub 仓库有没有对应的 npm 包」，判据是一行硬守卫：
+
+```js
+const linked = repoField.toLowerCase().includes(repo.toLowerCase())
+if (!linked) return { npm: null, version: null, checkedAt: today }
+```
+
+而本包此前的 packument 里 `repository` 是空串，`''.includes('loyalchiiina/dsh-artifact-linker')` 恒为 false → 每次探测都被判成「没发布到 npm」→ 目录里 `npm: null, version: null, downloads: null` → 市场前端 `downloadStatsText()` 见 null 直接 `return null`，整块统计不渲染。
+
+连带后果：
+- 卡片上没有 `· ↓ N`、没有 `· v0.3.9`；
+- 官方发现索引 `index.json`（只收有 npm 包+版本+发布时间的条目）里**完全搜不到**这个插件。
+
+目录方的这条规则是**故意的防冒领**（contributing.md：「The published package's `repository` field must point back at the repository listed here, or the two are not linked.」）。
+
+### 改：补齐 npm 元数据
+
+`package.json` 新增三个字段：
+
+```json
+"repository": { "type": "git", "url": "git+https://github.com/loyalchiiina/dsh-artifact-linker.git" },
+"homepage": "https://github.com/loyalchiiina/dsh-artifact-linker#readme",
+"bugs": { "url": "https://github.com/loyalchiiina/dsh-artifact-linker/issues" }
+```
+
+发布后，目录侧 `probe-npm.mjs` 的 `RECHECK_DAYS = 1` 规则（`entry.npm === null && ageDays(entry) > 1`）会**自动重探**，无需提 PR。重探通过后 npm / version / downloads 三个字段自动回填，下载量与版本号即出现在市场卡片上，插件也会进入官方发现索引。
+
 ## 0.3.8 — 2026-10-29
 
 ### 修：「在文件夹中显示」有时不给定位
