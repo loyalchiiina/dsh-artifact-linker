@@ -55,7 +55,7 @@ Click behaviour is decided by the modifier key — no first-time setup:
 
 | Item | What it does |
 | --- | --- |
-| **Preview in sidebar** | Opens the file in DSH's built-in right sidebar — the same route as clicking a file link in chat. That viewer handles PDF, Word, Excel, PowerPoint, Markdown, plain text, CSV, images, audio and video; an extension it cannot render is redirected to the default app instead of showing a blank pane |
+| **Preview in sidebar** | Opens the file in DSH's built-in right sidebar — the same route as clicking a file link in chat. **Since 0.4.0 this menu item is shown for every file type**, with no extension filtering: whatever viewer claims the address renders it (PDF / Word / Excel / PowerPoint / Markdown / plain text / CSV / images, plus audio and video once plugins such as video-preview / audio-preview are installed); anything unclaimed falls back to plain text or the default app. The trade-off is that a rare type may answer with a plain "the sidebar cannot open this" — accepted on purpose, so future viewer capabilities are picked up with zero changes here |
 | **Open with default app** | Hands the file to the OS association (Explorer / Excel / VLC / …) |
 | **Reveal in Explorer** | Opens the containing folder and selects the file |
 | **Save as…** | Copies the file to a location you pick |
