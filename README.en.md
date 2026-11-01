@@ -100,7 +100,10 @@ All tunables live in `cordis.patch.yml` (or the profile-level patch). Changing t
 | `allowOutside` | `true` | Allow resolving paths outside the workspace |
 | `statTtlMs` | `10000` | Host-side `stat` cache lifetime |
 | `searchMaxDepth` | `2` (max 8) | Recursion depth for bare-filename lookup |
+| `hoverDelayMs` | `40` | Hover-probe throttle in ms (ceiling 1000). `0` = no throttling |
 | `rulesText` | built-in 6 lines | Replace the injected rules wholesale (array or multi-line string) |
+
+On `hoverDelayMs`: up to 0.4.2 this was hard-coded at `150ms`, which is long enough (~9 frames) that the cursor change and highlight visibly lagged behind the pointer while sweeping across a line. Worse, the probe used the coordinates captured when the timer was *scheduled*, not when it *fired*, so the highlight could also land in the wrong place. Since 0.4.3 it is configurable, defaults to `40ms` (~2.5 frames), and every `mousemove` refreshes the coordinates so the probe reads the current position.
 
 On `allowOutside`: artifacts almost always live on a project drive (`E:\`, `D:\`) rather than inside the DSH workspace, so a strict default would make the plugin useless on first run. **Set it to `false` when shipping to other people** — that is the gate which stops this plugin from becoming "the model names any path and your machine opens it".
 

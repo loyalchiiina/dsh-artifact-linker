@@ -123,6 +123,9 @@ GET http://127.0.0.1:<port>/dsh-artifact-linker/info
 | `injectRules` | `true` | `false` = 不注入 prompt 段，模型不再被要求输出绝对路径 |
 | `clientChips` | `true` | `false` = 纯注入模式，不接管任何鼠标事件 |
 | `allowOutside` | `true` | `false` = 只允许打开 workspace 内的文件 |
+| `hoverDelayMs` | `40` | 悬停判定的节流间隔（毫秒，上限 1000）。`0` = 不节流；调大 = 更省 IO，但手型/高亮更迟钝 |
+
+**`hoverDelayMs` 说明**：0.4.2 及更早把这条写死成 `150ms`，鼠标划过一行文字时高亮会明显慢半拍（150ms ≈ 9 帧），而且判定用的是「排程那一刻」的坐标，不是判定那一刻的坐标，所以还会出现落点不准。0.4.3 起改为可配、默认 `40ms`（≈2.5 帧，肉眼已跟手），并且每次 `mousemove` 都会刷新坐标，判定时读最新值。
 
 **`allowOutside` 要特别说一句**：产物经常落在项目盘（`E:\…`、`D:\…`）而不是 DSH 的 workspace 里，所以默认放开。但它同时是安全闸——挡的是「模型说个 `C:\Windows\System32\xxx.exe` 就帮你点开」这类情况。**自己一个人用保持 `true` 更顺手；给别人用、或者接入不可信模型，改成 `false`。**
 

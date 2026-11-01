@@ -1,5 +1,55 @@
 # Changelog
 
+## 0.4.3 — 2026-11-01
+
+### 修复：悬停高亮慢半拍、落点不准（issue #1）
+
+报告（@ZhJack28）：悬停芯片延迟偏高，建议把节流降到 ~40ms，并且回调用最新坐标而不是排程那一刻的坐标。核实后**两条都成立**，而且第二条比第一条更影响手感。
+
+**根因①：间隔写死 150ms。** `onMove` 末尾写的是 `}, 150);`。150ms ≈ 9 帧，已经落在「人眼能明确察觉"慢了一拍"」的区间里：鼠标划过一行字时，手型和高亮总是追在指针后面出现。这个值还**不能配**——官方硬规则 #5 要求一切 tunable 能从 cordis.yml 改，写死本身就是违规。
+
+**根因②：坐标在 `setTimeout` 外面就取好了。**
+
+```js
+function onMove(ev) {
+  if (disposed || hoverTimer) return;
+  var x = ev.clientX;      // ← 排程这一刻取值
+  var y = ev.clientY;
+  hoverTimer = setTimeout(function () {
+    var hit = hitAt(x, y); // ← 150ms 后拿它判定
+  }, 150);
+}
+```
+
+于是 150ms 后判定的是「150ms 之前鼠标在哪」。鼠标已经移开 → 高亮画在已经离开的那段文字上；鼠标还没移到 → 高亮落在半路。表现就是「落点不准 / 高亮跟文字对不上」。
+
+**修法（`lib/client.js`）**
+
+| 位置 | 旧 | 新 |
+|---|---|---|
+| `onMove` | 有 timer 就直接 return（本次移动被丢弃，坐标也就丢了） | **每次移动都记账**（`hoverX`/`hoverY`），只在没有 timer 时排程 |
+| 判定回调 | 匿名闭包，读排程那一刻的 `x`/`y` | 提为具名 `hoverProbe()`，从 `hoverX`/`hoverY` 读**当前**坐标 |
+| 间隔 | 字面量 `150` | `hoverDelayMs`，默认 `HOVER_DELAY_DEFAULT_MS = 40`（≈2.5 帧），硬上限 1000 |
+| 来源 | 客户端自己写死 | 宿主 `config.hoverDelayMs` → `/info` 下发，客户端只做上下限兜底 |
+
+**顺手堵一个同源竞态**：`verify()` 首次解析要走 `/resolve`（异步）。等它回来时鼠标可能早就动了，原实现会拿**旧 hit 的 rect** 画高亮。现在回调里按 `hoverX/hoverY` 重算一次 `hitAt`，命中换了就 `hideHover()` 收摊——绝不把高亮留在已经离开的文字上。
+
+**配置（`cordis.patch.yml` 新增，默认值不变行为）**
+
+```yaml
+config:
+  hoverDelayMs: 40   # 0 = 不节流；上限 1000
+```
+
+**验证**
+
+- 新增探针 `test/probe-hover.cjs`（Node 里搭最小 DOM 假环境，把 `lib/client.js` 原样加载后直接驱动 `mousemove`），**29 项断言全 PASS / 0 FAIL**，`node test/probe-hover.cjs` 一键跑。
+- 断言覆盖：源码里已无 `}, 150)` 字面量、默认排程为 40ms、节流窗口内连续移动只排一次 timer、回调读到的是**最后一次**坐标（而非排程那一刻）、命中画在实测 rect 上（左-3 / 上-1）、移开恢复光标并隐藏浮层、**异步 verify 回来后鼠标已移走则不画**、鼠标停住时异步命中照样画出、不存在文件既不画也不变手型、`hoverDelayMs` 被 `/info` 覆盖后生效、越界值（负数 / 10000 / 非数字）被夹回合法区间、`dispose()` 清掉在途 timer 并摘掉监听、`VERSION` 与 `package.json` 一致。
+- `node --check lib/client.js` / `lib/index.js` 均通过；`dsh-plugin-dev check .` = OK（9 passed / 0 failed）。
+- 真机（Win11 / DSH 0.2.1-rc.5 / Node 24）：悬停跟手 <50ms，落点与文字对齐；左键揭示、Ctrl+左键、右键菜单三项交互无回归。
+
+---
+
 ## 0.4.2 — 2026-10-30
 
 ### 改：识别层重写为「存在性驱动」——不再靠扩展名/排除字符集猜边界，任意绝对路径、任意文件名都能打开
