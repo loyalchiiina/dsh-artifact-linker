@@ -27,7 +27,7 @@ Two halves, one contract.
 | Half | Responsibility |
 | --- | --- |
 | **Host** (`lib/index.js`) | Registers a **resident system-prompt section** so "declare artifacts with full absolute paths" holds in *every* session and *every* preset — no skill needs to be loaded. Exposes eight loopback-only routes for path resolution, `stat`, reveal, open, save-as and copy-file. |
-| **Client** (`lib/client.js`) | Turns artifact names in the transcript into clickable targets: left click reveals, right click opens a seven-item menu (sidebar preview, open, reveal, save-as, copy file, copy path, add to composer). **No resident UI, no scanning, no timers.** |
+| **Client** (`lib/client.js`) | Turns artifact names in the transcript into clickable targets: **left click previews in the sidebar** (matching the official present card), right click opens an **eight-item** menu (open in sidebar, open in floating window, reveal in Explorer, open with default app, save-as, copy file, copy path, add to composer). **No resident UI, no scanning, no timers.** |
 
 The host half closes the loop: even when the model only says `result.h5`, the route layer resolves it against the session workspace, then falls back to a shallow recursive basename search, and returns the real absolute path.
 
@@ -37,16 +37,18 @@ Hover an artifact name and it picks up a Codex-style blue dashed outline — tha
 
 ![Context menu](https://raw.githubusercontent.com/loyalchiiina/dsh-artifact-linker/main/docs/context-menu.png)
 
+Want to see it in action? [Watch the demo video (0.4.4 right-click menu)](https://github.com/loyalchiiina/dsh-artifact-linker/releases/download/v0.4.4/demo-0.4.4.mp4).
+
 ## Interaction
 
 Click behaviour is decided by the modifier key — no first-time setup:
 
 | Action | Result |
 | --- | --- |
-| **Left click** on a file name / path | Reveal in File Explorer *with the file selected* |
+| **Left click** on a file name / path | Preview in DSH's built-in right sidebar (same route as the official present card; absolute paths resolve in **zero round-trips**; unclaimed types fall back to the default app) |
 | **Ctrl / Shift / Cmd + click** | Open with the system's default application |
 | **Alt + click** | Copy the full absolute path to the clipboard |
-| **Right click** on an artifact | Inline menu — seven actions, listed below |
+| **Right click** on an artifact | Inline menu — eight actions, listed below |
 | **Right click** on non-artifact text | Fully passed through, the host's native menu appears as usual |
 | **Hover** | Cursor becomes a pointer *only after* the file is confirmed to exist |
 | File missing / unresolvable | Silent pass-through or a one-shot toast. **Never pretends to succeed.** |
@@ -55,7 +57,8 @@ Click behaviour is decided by the modifier key — no first-time setup:
 
 | Item | What it does |
 | --- | --- |
-| **Preview in sidebar** | Opens the file in DSH's built-in right sidebar — the same route as clicking a file link in chat. **Since 0.4.0 this menu item is shown for every file type**, with no extension filtering: whatever viewer claims the address renders it (PDF / Word / Excel / PowerPoint / Markdown / plain text / CSV / images, plus audio and video once plugins such as video-preview / audio-preview are installed); anything unclaimed falls back to plain text or the default app. The trade-off is that a rare type may answer with a plain "the sidebar cannot open this" — accepted on purpose, so future viewer capabilities are picked up with zero changes here |
+| **Open in sidebar** | Opens the file in DSH's built-in right sidebar — the same route as clicking a file link in chat. **Since 0.4.0 this menu item is shown for every file type**, with no extension filtering: whatever viewer claims the address renders it (PDF / Word / Excel / PowerPoint / Markdown / plain text / CSV / images, plus audio and video once plugins such as video-preview / audio-preview are installed); anything unclaimed falls back to plain text or the default app. The trade-off is that a rare type may answer with a plain "the sidebar cannot open this" — accepted on purpose, so future viewer capabilities are picked up with zero changes here |
+| **Open in floating window** | Opens a preview in a separate floating window (enhancement; if a popup blocker or the host blocks it, use "Open in sidebar" instead) |
 | **Open with default app** | Hands the file to the OS association (Explorer / Excel / VLC / …) |
 | **Reveal in Explorer** | Opens the containing folder and selects the file |
 | **Save as…** | Copies the file to a location you pick |
