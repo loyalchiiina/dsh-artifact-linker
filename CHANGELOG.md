@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.4.5 — 2026-11-07
+
+### 修复：宿主渲染的「文件芯片 / 交付卡片」右键只出官方菜单
+
+**现象**：聊天里由宿主渲染的文件芯片（markdown 文件链接、present 交付卡片，例如表格里的蓝色 `追光.mp3` 芯片），右键只弹出宿主官方菜单（在侧边栏打开 / 在浮窗中打开 / 在文件夹显示 / 用 XX 打开 / 复制文件路径 / 另存为…），插件的 8 项菜单不出现；而正文里的纯文本绝对路径（如 `…\lib\client.js`）右键正常。
+
+**根因**：宿主把文件渲染成 `<button class="…fileMention …fileLink" title="<路径>">`（markdown 文件链接）与 `<div data-presented-file><button class="cardPreview" title="<绝对路径>">`（present 卡片），右键由宿主 `ctx.contextMenus` 的官方 `open-in-app.file` provider 接管；这些节点正文里没有「含路径的纯文本节点」，`hitAt` 只能看到裸文件名、`/resolve` 失败 → 放行 → 只出官方菜单。
+
+**修复**：在 `contextmenu` 捕获期先识别宿主文件芯片/交付卡片，从其 `title` 读取真实路径（相对路径按当前会话 cwd 补成绝对路径），随即 `preventDefault()+stopPropagation()` 拦下官方菜单并弹出插件自己的完整 8 项菜单；纯文本路径仍走原 `caretRangeFromPoint` 逻辑。同时 `click` 对芯片直接让路给宿主，避免左键双开。
+
+**验证**：`node --check lib/client.js` 通过、无 BOM；DOM-stub 探针 `probe_chip_menu.cjs` 8/8（绝对路径芯片拦截、相对路径按 cwd 补全、普通文本放行）。
+
+**生效方式**：本次只改客户端 bundle `lib/client.js` → **Ctrl+Shift+R 硬刷新**即可（Ctrl+R 不重新读盘）。
+
 ## 0.4.4 — 2026-11-05
 
 ### 对齐官方交付卡片：左键改为侧栏预览，右键 8 项菜单
