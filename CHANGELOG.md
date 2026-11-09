@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.7 — 2026-11-09
+
+### 打包：npm 包内补上 `screenshots.json` 与 `docs/*.png`，修复 npm 用户看不到配图
+
+**问题**：`files` 白名单只列了 `lib` / `README` / `LICENSE` / `cordis.patch.yml` 等运行文件，未含 `docs/*.png` 与 `screenshots.json`。GitHub 页面上有图、npm 包内一张都没有，npm 用户与插件市场从 npm 侧也取不到截图清单。
+
+**修复**：`files` 白名单补 `docs/*.png`（1 张：`docs/context-menu.png`）与 `screenshots.json`。该白名单补丁此前已提交但未随任何版本发布，本次 0.4.7 首次带上。
+
+**验证**：`npm pack --dry-run` 包内 png 1 张、`screenshots.json` 存在；`npm view dsh-artifact-linker version` = 0.4.7 = GitHub tag `v0.4.7` = 仓库 `package.json`。
+
 ## 0.4.6 — 2026-11-07
 
 ### 修复：常驻注入第 2 条铁律要求「正文只写文件名」，导致正文产物路径被省略
