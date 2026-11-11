@@ -316,8 +316,8 @@ const PROJECT = fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf
   eq((env9.listeners['mousemove'] || []).length, 0, 'dispose() removes the mousemove listener');
 
   // ── 9. 版本号自洽（避免只改 CHANGELOG 忘了 VERSION） ────────────────────
-  eq(env.exports.version, '0.4.3', 'client VERSION matches the release being built');
-  check(/"version":\s*"0\.4\.3"/.test(PROJECT), 'package.json version matches VERSION');
+  eq(env.exports.version, '0.5.0', 'client VERSION matches the release being built');
+  check(/"version":\s*"0\.5\.0"/.test(PROJECT), 'package.json version matches VERSION');
 
   // ── 汇总 ───────────────────────────────────────────────────────────────
   for (const m of PASS) console.log('  PASS  ' + m);
@@ -332,3 +332,4 @@ const PROJECT = fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf
   console.error('probe crashed:', e && e.stack || e);
   process.exit(2);
 });
+

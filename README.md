@@ -1,8 +1,8 @@
 # dsh-artifact-linker · 产物路径联动器
 
-> **功能描述**：强制对话里每个产物都给出完整绝对路径，并把官方右键菜单扩展成六项：复制文件到剪贴板、复制路径到对话框、在侧边栏打开、在悬浮窗打开、定位文件夹、用默认应用打开，产物一键分享给好友。适配 DSH 内核 0.2.2-rc.1。
+> **功能描述**：强制对话里每个产物都给出完整绝对路径，并把官方右键菜单扩展成八项：在侧边栏打开、在悬浮窗打开、在文件夹中显示、用默认程序打开、另存为…、复制文件、复制文件路径、添加到对话框，产物一键分享给好友。适配 DSH 内核 0.2.2-rc.1。
 >
-> **English**: Forces every file the assistant produces to be reported as an absolute path, and extends the official context menu on a file link with six actions: copy the file to the clipboard, copy its path into the chat box, open it in the sidebar, open it in a floater, reveal it in Explorer, and open it with the default app, so a result reaches a friend in one click. Adapts DSH kernel 0.2.2-rc.1.
+> **English**: Forces every file the assistant produces to be reported as an absolute path, and extends the official context menu on a file link with eight actions: open in the sidebar, open in a floater, reveal in Explorer, open with the default app, save as..., copy the file, copy the file path, and add it to the chat box, so a result reaches a friend in one click. Adapts DSH kernel 0.2.2-rc.1.
 
 
 > 让 DSH 交付的每一个产物，都能**点一下就到位**——不用再「复制路径 → 打开文件管理器 → 贴到地址栏 → 回车」。

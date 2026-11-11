@@ -1,6 +1,6 @@
 {
     "name":  "dsh-artifact-linker",
-    "version": "0.4.7",
+    "version": "0.5.0",
     "description":  "DSH 产物路径联动器：常驻注入「产物路径铁律」让模型输出完整绝对路径，同时把聊天正文里的文件名/路径渲染成一键可点的产物芯片——左键在右侧边栏预览（对齐官方交付卡片，绝对路径 0 次解析直通，侧栏认领不了自动退回系统默认程序），Ctrl/Shift/Cmd+左键用系统默认程序打开，Alt+左键复制绝对路径，右键 8 项菜单（在侧栏打开 / 在浮窗中打开 / 在文件夹中显示 / 用默认程序打开 / 另存为… / 复制文件 / 复制文件路径 / 添加到对话框）。宿主端提供回环只读路由与 /saveas /copyfile 两个文件搬运动作（Shell COM 揭示、WinForms 保存对话框、CF_HDROP 剪贴板），客户端零侵入、不改 React 节点、不接管 markdown 图片语法。解决「产物要打开得先复制路径再粘到文件管理器」的反复割裂。/ Turn declared artifact paths into one-click chips: resident system-prompt rules force absolute paths, the client half renders file names as clickable chips, left click previews in DSH's built-in sidebar (absolute paths resolve in 0 round-trips; unclaimed types fall back to the default app), Ctrl/Shift/Cmd+click opens with the system default app, Alt+click copies the absolute path, and the right-click menu offers eight actions (open in sidebar / open in floating window / reveal in Explorer / open with default app / save-as / copy-file / copy-path / insert-into-composer). Host routes are loopback-only; zero telemetry.",
     "type":  "module",
     "main":  "lib/index.js",

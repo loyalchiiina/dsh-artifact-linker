@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.5.0 — 2026-11-10
+
+### 强制绝对路径：从「提示词提醒」升级为「代码级硬门」（两层）
+
+**问题**：本插件此前**只注入一段提示词**（`ctx.systemPrompt.section`）。全文件检索 `onMessage` / `messageHook` / `postProcess` / `rewrite` / `intercept` 等一律无命中 —— 也就是说模型不遵守时，插件**没有任何能力阻止**。用户实测反馈：规则每轮都在注入，但路径该给省略号还是给省略号。
+
+**修复**（改 `lib/index.js`，新增 `lib/path-gate.js`）：
+
+- **(1.5) 第一层 · `llm/stream` 流式改写**：正文里的相对路径与省略式路径，能 stat 到真身的就地改写成完整绝对路径；改不了的一律原样透传（宁漏改，不改错）。不含路径的块滚动放出，尽量保住打字机手感。
+- **(1.6) 第二层 · 拒绝式硬门**：
+  1. `tools/pre-execute` —— `write` / `edit` / `present` / `univer_export` / `univer_print_pdf` 的写盘参数出现相对或省略路径 → 返回 `{kind:"deny"}`，直接拒绝这次工具调用；
+  2. `agent/turn-stopping` —— 本轮正文出现同类路径 → `agent.steer()` 要求模型重发（同 turn 最多一次，同会话累计上限 5 次）。
+- 开关：`forceAbsolutePaths` / `pathGateTools` / `pathGateReply`，均默认 `true`，置 `false` 即回到旧行为。
+- `inject` 由 `["webServer","systemPrompt"]` 扩为含 `"llm"` 与 `"tools"`；三个新钩子全部经 `ctx.effect` 登记，避免热重载悬挂。
+
+**验证**：`node --check` ×3 全过；三套离线测试全绿（对抗套件 **100 PASS / 0 FAIL**、第一层回归 **47 / 0**、第二层自测 **15 / 0**）。对抗套件覆盖：含空格的绝对路径、`%VAR%` / `$env:` / `${}` / `~` 占位符、中文紧贴无分隔、围栏与行内代码、URL/UNC 放行、畸形参数不崩、跨 turn 不锁死、拿不到 `createUserMessage` 的降级路径。
+
+**已知局限**：解析不到真身的路径一律漏改（不编造）；含路径的正文块要攒到块结束才吐，打字机体验变成「一块一块出」；宿主侧改动**必须彻底退出 DSH 客户端再启动**才生效（Node 无热重载）。
+
 ## 0.4.7 — 2026-11-09
 
 ### 打包：npm 包内补上 `screenshots.json` 与 `docs/*.png`，修复 npm 用户看不到配图
