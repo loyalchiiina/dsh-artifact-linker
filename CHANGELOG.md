@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.5.3 — 2026-11-13
+
+### 修复：右键接管整体失效（正文文件芯片只弹宿主官方菜单）
+
+- **根因**：0.5.2 为解决「declared inject 卡住 web boot」，把 `sidebarRight` 的服务检查挪进
+  `apply()` 开头，取不到就 `return`。结果该服务一旦缺失或晚到，整个客户端**一连都不挂** ——
+  右键监听、浮动胶囊、点击接管全部没绑定，用户右键正文文件芯片只看到宿主官方菜单
+  （在侧边栏打开 / 在浮窗中打开 / 在文件夹显示 / 使用默认应用打开 / 复制文件路径 / 另存为…），
+  表现即「插件失效」。`sidebarRight` 实际只影响「在侧栏打开」这一项，`openInSidebar()`
+  自己已有 `if (!sidebar || typeof sidebar.openResource !== "function") return false` 的降级。
+- **修复 1**：`apply()` 不再因 `sidebarRight` 缺失而中止，直接挂载。
+- **修复 2**：`chipPathAt()` 增加 `textContent` 兜底。宿主给芯片的 `title` 只在 `src` 为空时
+  才写入（实测 asar：`title: src === undefined ? file.path : void 0`），宿主补上 `src` 后
+  `title` 为 `undefined` → 旧版在此 `return null` → 不抢。截断文本（含 `…` / `...`）不认，
+  避免拿半截路径去打开文件。
+- **修复 3**：新增客户端 bundle 兜底投递 —— 宿主侧 `/dsh-artifact-linker/client.bundle.js`
+  直接吐 `lib/client.js`，并通过 `webserver/index-inject` 往 `<head>` 插 `<script src>`。
+  即使 DSH 的客户端 module graph 整包跳过本插件也能加载（client.js 有 GUARD 幂等保护）。
+- **新增可观测性**：`/dsh-artifact-linker/client-alive` 探针，`apply()` 一到就 ping 一次；
+  宿主日志出现 `dsh-artifact-linker: CLIENT-ALIVE ping received from browser` 即证明
+  客户端确实加载并执行了。
+- **生效**：彻底退出 DSH 再启动（宿主 `lib/index.js` 与客户端 `lib/client.js` 都改了，
+  只按 Ctrl+Shift+R 不够）。
+
+## 0.5.2
+- 启动稳定性：服务从 declared inject 移除（避免 pending 卡住 web boot），改为安全取值器 __safeSvc 加最多 30s 轮询。
+
+## 0.5.1
+- 框架缓存修复：sidebarRight 改为软等待（最多 30s），不再卡住启动。
+
 ## 0.5.0 — 2026-11-10
 
 ### 强制绝对路径：从「提示词提醒」升级为「代码级硬门」（两层）
