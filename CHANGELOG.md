@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.5.4 — 2026-11-13
+
+### 修复：「在浮窗中打开」每次都失败
+
+- **根因**：`openFloating()` 用的是 `window.open(addr, "_blank", "width=960,height=720,noopener,noreferrer")`。
+  在 Electron 宿主里这条路径**必然拿不到窗口**：①宿主对 `window.open` 有 `setWindowOpenHandler`
+  管控；②`dsh-resource://` 是宿主自定义协议，独立 BrowserWindow 没有对应 protocol handler，
+  即便弹出来也是白屏。所以每次点「在浮窗中打开」都只走到那句失败提示。
+- **修复**：改走宿主官方浮窗通道
+  `sidebarRight.openResourceIn(sessionId, address, { destination: "float" })`
+  —— asar 实测宿主自己的右键菜单「在浮窗中打开」就是这么调的
+  （`ctx.sidebarRight.openResourceIn(sessionId, fileAddressFor(...), { destination })`）。
+  宿主没有该能力时回退 `openResource(addr, { destination: "float" })`，两者都不可用才返回失败。
+- **顺带**：「在侧栏打开」也改为优先走 `openResourceIn(..., { destination: "sidebar" })`，
+  落点由插件明确指定、不再靠宿主猜；老接口 `openResource` 保留为兜底。
+- **失败提示**从「可能被弹窗拦截」改为「宿主未提供浮窗能力或当前会话未就绪」，因为原因已经变了。
+- **生效**：客户端改动 → Ctrl+Shift+R 硬刷新即可（本次未动宿主 `lib/index.js` 的业务逻辑）。
+
 ## 0.5.3 — 2026-11-13
 
 ### 修复：右键接管整体失效（正文文件芯片只弹宿主官方菜单）
