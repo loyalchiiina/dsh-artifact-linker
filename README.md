@@ -4,6 +4,10 @@
 >
 > **English**: Forces every file the assistant produces to be reported as an absolute path, and extends the official context menu on a file link with eight actions: open in the sidebar, open in a floater, reveal in Explorer, open with the default app, save as..., copy the file, copy the file path, and add it to the chat box, so a result reaches a friend in one click. Adapts DSH kernel 0.2.2-rc.1.
 
+> ⚠️ **版本说明（2026-11-13）**：0.5.4 ~ 0.5.6 的「在悬浮窗打开」不可用——插件取会话 id 时用错了 `sidebarRight.mounted` 的取值方法（应 `getSnapshot()`，误用 `get()`），拿到的不是当前会话，宿主内部查不到对应动作后**静默丢弃请求**（不报错、无提示，表现就是点了没反应）。0.5.7 已修复并实测通过。同一轮还修了 0.5.4 的「双通道重复注册」问题。从旧版升级请**彻底退出 DSH 再启动**；只改了客户端 bundle 时 `Ctrl+Shift+R` 即可。
+>
+> **Status (2026-11-13)**: “Open in floater” was broken in 0.5.4 ~ 0.5.6. The plugin resolved the mounted session id with the wrong accessor (`mounted.get()` instead of `getSnapshot()`), so it picked an unrelated session; the host then found no actions for that id and **silently dropped the request** — no error, no hint, the click simply did nothing. Fixed in 0.5.7 and verified. The same round also removed a duplicate client-bundle registration introduced in 0.5.4.
+
 
 > 让 DSH 交付的每一个产物，都能**点一下就到位**——不用再「复制路径 → 打开文件管理器 → 贴到地址栏 → 回车」。
 
