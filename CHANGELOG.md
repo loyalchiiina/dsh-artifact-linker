@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.5.7 (2026-11-13)
+
+- 修复「在浮窗中打开」点了没反应（宿主静默丢弃，不是报错）。
+- 根因：拿会话 id 的写法错了两层 —— 判的是 `sidebar.mounted.get()`，而宿主 Signal 的取值方法是
+  `getSnapshot()`；即便取到，读的也是 `m.sessionId`，而 `getSnapshot()` 返回的就是会话 id 字符串本身
+  （宿主源码 `const sessionId = this.mounted.getSnapshot()`）。两处都落空后代码退回「会话列表里第一个带
+  cwd 的会话」，那多半是历史会话；`openResourceIn` 内部 `actionsFor(sid)` 取不到就静默什么都不做。
+- 修法：新增 `currentSid()`，按 `mounted.getSnapshot()` → `mounted.get()` → 字符串形态 → 列表兜底 四级取值；
+  侧栏与浮窗共用。浮窗再加一次 320ms 幂等补投（宿主对已开文件是「揭示」语义，重复调用无害）。
+- 侧栏一直能用是因为 `openResource(addr)` 不带 destination，走 `place()` 落到当前 pane，不查 `actionsFor`。
+
 ## 0.5.6 (2026-11-13)
 
 - **修复：0.5.5 重启后仍然失效**。0.5.5 把 index-inject 兜底默认关掉，但实测重启这一轮
