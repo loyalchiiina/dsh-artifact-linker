@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.5.6 (2026-11-13)
+
+- **修复：0.5.5 重启后仍然失效**。0.5.5 把 index-inject 兜底默认关掉，但实测重启这一轮
+  （runId `1fc70f38`）renderer 零 error、`client fallback: ... armed` 日志也消失、
+  可 `CLIENT-ALIVE ping` 仍出现两次，且右键功能依旧没绑上 —— 说明宿主 `dsh.client` 这一条
+  通道在本机并不可靠，而另一条仍会投递。
+- 改为从根上消除 duplicate：`client.js` 在 `__ModuleLoader__.load(...)` **之前**加脚本级
+  幂等守卫 `window.__dshArtifactLinkerV1_BUNDLE__`。第二份脚本执行时直接不注册 factory。
+- index-inject 兜底**恢复默认开启**（`clientFallback: false` 可显式关闭），双通道共存无害。
+- 守卫改为「先确认 `window.__ModuleLoader__` 就绪、`load()` 成功返回后才置位」：若第一份脚本在 loader 尚未加载时到达，直接跳过且不置位，把机会留给后到的通道；旧写法「先置位再 load」会因一次 TypeError 把标记永久置 true，导致客户端再也不注册。
+- 侧栏打开回退到 0.5.3 的老接口 `openResource(addr)`（0.5.4 改优先 `openResourceIn` 后用户实测点不开），`openResourceIn` 仅作回退；浮窗仍走 `openResourceIn(..., { destination: "float" })`。
+- 升级方式：`lib/index.js` 与 `lib/client.js` 都改了 → **彻底退出 DSH 再启动**。
+
+## 0.5.5 (2026-11-13)
+
+- **修复：右键功能大面积失效（根因 = 客户端 bundle 被执行两次）**。宿主日志实测两次
+  `Uncaught Error: client-modules: duplicate factory registration for "dsh-artifact-linker"`
+  （`2026-11-13T02:53:10Z`、`2026-11-13T04:06:23Z`），客户端模块链当场中断，右键接管与
+  胶囊等后续注册全部没绑上 → 用户看到「右键很多功能没反应、在侧边栏打开打不开」。
+  成因：0.5.3 新增的 `webserver/index-inject` 兜底与宿主 `dsh.client` 通道同时投递同一份
+  bundle；`GUARD` 幂等保护在 `apply()` 内，而 duplicate 在 `__ModuleLoader__` 注册
+  factory 阶段就抛了，根本来不及生效。
+- 兜底改为**默认关闭**，仅当 `cordis.patch.yml` 里显式配置 `clientFallback: true` 才注入；
+  `/client.bundle.js` 路由与 `/client-alive` 探针保留，应急通道仍可用。
+- 升级方式：本改动在宿主半边（`lib/index.js`）→ **需彻底退出 DSH 再启动**，之后 `Ctrl+Shift+R`。
+
 ## 0.5.4 — 2026-11-13
 
 ### 修复：「在浮窗中打开」每次都失败
