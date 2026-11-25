@@ -1,8 +1,8 @@
 # dsh-artifact-linker · 产物路径联动器
 
-> **功能描述**：强制对话里每个产物都给出完整绝对路径，并把官方右键菜单扩展成八项：在侧边栏打开、在悬浮窗打开、在文件夹中显示、用默认程序打开、另存为…、复制文件、复制文件路径、添加到对话框，产物一键分享给好友。适配 DSH 内核 0.2.2-rc.1。
+> **功能描述**：强制对话里每个产物都给出完整绝对路径，并把官方右键菜单扩展成八项：在侧边栏打开、在悬浮窗打开、在文件夹中显示、用默认程序打开、另存为…、复制文件、复制文件路径、添加到对话框，产物一键分享给好友。适配 DSH 内核 0.2.3-alpha.2（本机实测 exe / app.asar / 注册表三处一致）。
 >
-> **English**: Forces every file the assistant produces to be reported as an absolute path, and extends the official context menu on a file link with eight actions: open in the sidebar, open in a floater, reveal in Explorer, open with the default app, save as..., copy the file, copy the file path, and add it to the chat box, so a result reaches a friend in one click. Adapts DSH kernel 0.2.2-rc.1.
+> **English**: Forces every file the assistant produces to be reported as an absolute path, and extends the official context menu on a file link with eight actions: open in the sidebar, open in a floater, reveal in Explorer, open with the default app, save as..., copy the file, copy the file path, and add it to the chat box, so a result reaches a friend in one click. Adapts DSH kernel 0.2.3-alpha.2 (verified against the local exe, app.asar and uninstall registry).
 
 > ⚠️ **版本说明（2026-11-13）**：0.5.4 ~ 0.5.6 的「在悬浮窗打开」不可用——插件取会话 id 时用错了 `sidebarRight.mounted` 的取值方法（应 `getSnapshot()`，误用 `get()`），拿到的不是当前会话，宿主内部查不到对应动作后**静默丢弃请求**（不报错、无提示，表现就是点了没反应）。0.5.7 已修复并实测通过。同一轮还修了 0.5.4 的「双通道重复注册」问题。从旧版升级请**彻底退出 DSH 再启动**；只改了客户端 bundle 时 `Ctrl+Shift+R` 即可。
 >
@@ -57,6 +57,7 @@ DSH 里预览器已经能开图片、代码、pdf、office。但**插件、脚�
 | **右键**非产物文字 | 完全放行，宿主原生菜单照常出现 |
 | **悬停** | 只有**确认文件真的存在**才变手型、才画虚线 |
 | 文件不存在 / 解析不到 | 静默放行或一次性提示，**绝不假装成功** |
+| **聊天输入框里的文字** | 只当普通文本：不变手型、不画高亮、左键落光标、右键出系统菜单（0.5.8 起）。原因很直接——把路径复制进输入框是为了改字，不是要点开；可写区不做链接，只读正文照旧可点 |
 
 ### 右键菜单
 

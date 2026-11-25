@@ -90,7 +90,7 @@ Results are cached — 10 s for `stat`, 30 s for the basename index — so repea
 # 3. Fully restart DSH — client bundles are NOT reloaded by Ctrl+R
 ```
 
-> The host half needs `webServer` and `systemPrompt`; the client half is a `__ModuleLoader__` bundle. Peers declare `@deepseek-ai/dsh >=0.2.1-rc.3` — the installer compares the runtime version against that range and refuses a mismatch.
+> The host half needs `webServer` and `systemPrompt`; the client half is a `__ModuleLoader__` bundle. Peers declare `@deepseek-ai/dsh >=0.2.1-rc.3` — the installer compares the runtime version against that range and refuses a mismatch. Verified against DSH kernel `0.2.3-alpha.2` (local exe, `app.asar` and uninstall registry agree).
 
 ## Config
 

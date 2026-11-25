@@ -45,7 +45,7 @@ const openIn = (destination) => () => {
 - `VERSION` 常量与 `package.json` 同步 0.5.3 → 0.5.4。
 
 ### 验证
-- `node --check lib/client.js` / `lib/index.js` 均 exit=0
+- `nnode --check lib/client.js` / `lib/index.js` 均 exit=0
 - BOM：client.js `47,47,32,100` / index.js `47,47,32,100` / package.json `123,10,32,32` / dev-log `35,32,100,115`（全无）
 - `package.json` version = 0.5.4
 
@@ -57,7 +57,7 @@ const openIn = (destination) => () => {
 ## 2026-11-13 06:45 · v0.5.3（未发版，仅本地）· 修复右键接管整体失效
 
 ### 起因
-用户报「右键文件链接插件失效」。实测现象：正文里右键文件芯片（`C:\...\console-sentinel-推送任务书.md`），
+用户报「右键文件链接插件失效」。实测现象：正文里右键文件芯片（`C:...console-sentinel-推送任务书.md`），
 弹出的是**浅色白底、6 项**的菜单（在侧边栏打开 / 在浮窗中打开 / 在文件夹显示 /
 使用默认应用打开〔灰色〕/ 复制文件路径 / 另存为…），而本插件的菜单是**深色 `#22242a`
 + 顶部文件名行 + 8 项**。→ 弹出的是**宿主官方 contextMenus**，插件菜单从未出现。
@@ -105,7 +105,7 @@ DSH 的客户端 module graph 会整包跳过某些插件（console-sentinel 的
 `client.js` 顶部有 `GUARD = "__dshArtifactLinkerV1"` 幂等保护，被注入两次也只会 apply 一次。
 
 ### 验证
-- `node --check lib/client.js`、`node --check lib/index.js` 均 exit=0
+- `nnode --check lib/client.js`、`nnode --check lib/index.js` 均 exit=0
 - BOM：client.js `47,47,32,100` / index.js `47,47,32,100` / package.json `123,10,32,32`（全部无 BOM）
 - `package.json` 解析 version = `0.5.3`；`lib/client.js` L32 `var VERSION = "0.5.3";`
 - **待重启后复核两条日志**：`client fallback: index-inject hook armed` +
@@ -113,3 +113,60 @@ DSH 的客户端 module graph 会整包跳过某些插件（console-sentinel 的
 
 ### 生效方式
 宿主 `lib/index.js` 与客户端 `lib/client.js` 都改了 → **彻底退出 DSH 再启动**（Ctrl+Shift+R 不够）。
+
+## 2026-11-25 19:0x · v0.5.8 · 修复「输入框里的路径文字一点就跳侧边栏」
+
+### 起因
+用户报：复制到聊天输入框里的路径文字，鼠标一划变手型、点一下被跳侧边栏，想改字 / 定位光标全被抢走。
+原话：「复制到输入框内的文字就不要出现跳转侧边栏的情况了不然影响输入，可以加个识别限制」。
+
+### 定位（改哪份、看哪份）
+- 在跑的是 DeepSeek Harness.exe（官方版），数据根 ~.dsh-official；
+  源码仓库 <本机 local-plugins>\dsh-artifact-linker（实体目录，v0.5.7）。
+- 实装 ~\.dsh-official\profiles\desktop\node_modules\dsh-artifact-linker\lib\client.js
+  是 **pnpm 硬链接**（fsutil hardlink list 指向 C 盘全局 pnpm store 的 v11 files 分片）
+  → 绝不能在实装目录原地写（会污染 store 与其它 profile），必须先破链接再换文件。
+- 根因：事件链 (onMove / onClick / onContext / hoverProbe) 一律先 hitAt(x,y) 用
+  caretRangeFromPoint 反查鼠标下的文字，**完全不区分只读正文与可写输入框** —— 输入框里的路径字符串
+  与正文里的路径长得一样，于是同样被识别成产物芯片。
+
+### 修法（lib/client.js 单文件，宿主端不动）
+1. 新增 EDIT_NODE_SELECTOR + editNodeOf(el) + inEditZone(target)：
+   命中点或任一祖先落在 textarea,input,select,[role="textbox"],[contenteditable],[data-lexical-editor],.ProseMirror
+   里（再以 isContentEditable 兜底继承语义）即判为输入区。
+   **踩坑记录**：初稿把 .composer / [data-composer] 也算进来，配合 closest() 会顺藤爬到外层
+   容器 → 正文任意外层一旦命中就整片拖死链接功能。改回只认真正的可编辑/输入节点。
+2. onMove：进输入区当场收摊（hideHover + setCursor("")），不点 40ms 节流；记 hoverInEdit。
+3. hoverProbe：延迟回调再用 document.elementFromPoint 读一次现场，双条件任一命中即不画高亮
+   （避免 40ms 内移入/移出的竞态）。
+4. onClick：inEditZone(ev.target) → 直接 return（不解析、不请求、不跳侧栏、不抢修饰键语义）。
+5. onContext：同样在最前面 return，原生编辑菜单（粘贴 / 剪切 / 拼写检查）完整归用户。
+6. findComposer：「添加到对话框」的候选必须过 isEditableElement()，排除只读的 [role="textbox"] 渲染层。
+7. copy 动作后置 hoverInEdit = true + hideHover()，光标仍在输入框时不残留高亮。
+8. 版本：package.json 0.5.8；lib/client.js var VERSION = "0.5.8"；CHANGELOG 0.5.8 条目。
+
+### 装进实装目录（破硬链接的正确做法）
+```powershell
+$tmp = "lib\__new-<rand>"      # 同目录
+Copy-Item "<源仓库>\lib\client.js" $tmp
+Move-Item -LiteralPath $tmp -Destination "<实装包>\lib\client.js" -Force   # 原子换名，旧硬链接条目消失
+```
+
+**踩坑**：第一次把副本放到了包根（package__new-....js 这类临时文件），必须删掉并确认
+lib\client.js 的 LinkType 从 HardLink 变成普通文件；随后用 SHA256 与源码逐字节对账。
+
+### 验证（机器事实）
+- node --check：源码与实装两份 lib/client.js 均 exit=0。
+- SHA256：源码 = 实装 = 7490DC15...A1487；package.json / CHANGELOG.md 同样逐字节一致。
+- fsutil hardlink list 实装 lib/client.js：现在只剩自身一条（已脱离 pnpm store）。
+- 无 BOM：client.js 47,47,32 / package.json 123,10,32。
+- 行为测试 `test/edit-zone.test.cjs`（无依赖假 DOM）：12/12 PASS，覆盖「正文 span/文本节点不放行」
+  与「contenteditable/textarea/[role=textbox]/Lexical/ProseMirror 一律放行」，`isEditableElement` 双向正确。
+- 静态判据：inEditZone 出现在 L885(click) / L957(contextmenu) / L1061+L1070(move+probe)，
+  isEditableElement 出现在 L476(findComposer)。
+- **待人工验收**（客户端侧，无法脚本化）：复制一条路径进输入框 → 悬停不变手型、左键落光标、
+  右键出系统编辑菜单；正文里点同一路径仍然跳侧边栏。
+
+### 生效方式
+只改了 lib/client.js（客户端 bundle）+ 包元数据，宿主 lib/index.js 未动 →
+**Ctrl+Shift+R 硬刷新即可**（Ctrl+R 只从内存缓存重载、不重新读盘）。看版本号：bundle 内 VERSION = "0.5.8"。
